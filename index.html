@@ -24,7 +24,9 @@
 </head>
 <body>
     <div id="root"></div>
-    <script type="text/babel">
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script type="text/babel">
     const { useState } = React;
 
     function NonprofitDataDiagnostic() {
@@ -32,6 +34,15 @@
       const [showResults, setShowResults] = useState(false);
       const [showIntro, setShowIntro] = useState(true);
       const [expandedReflection, setExpandedReflection] = useState({});
+      const [userInfo, setUserInfo] = useState({
+        firstName: '',
+        lastName: '',
+        organizationName: '',
+        email: '',
+        phone: '',
+        role: ''
+      });
+      const [formSubmitted, setFormSubmitted] = useState(false);
 
       const questions = [
         {
@@ -201,7 +212,128 @@
         };
       };
 
-      const results = calculateResults();
+      const downloadReport = () => {
+        const results = calculateResults();
+        const reportContent = `
+          <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto;">
+            <h1 style="color: #1f2937; text-align: center; margin-bottom: 10px;">Nonprofit Data Diagnostic Report</h1>
+            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">6 Steps to Prove Your Nonprofit's Impact</p>
+            
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 30px 0;">
+            
+            <h2 style="color: #1f2937; margin-top: 30px;">Organization Information</h2>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Name:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${userInfo.firstName} ${userInfo.lastName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Organization:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${userInfo.organizationName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Role:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${userInfo.role || 'Not provided'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Email:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${userInfo.email}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px;"><strong>Phone:</strong></td>
+                <td style="padding: 8px;">${userInfo.phone}</td>
+              </tr>
+            </table>
+
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 30px 0;">
+
+            <h2 style="color: #1f2937; margin-top: 30px;">Assessment Results</h2>
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+              <p style="color: #6b7280; margin: 0 0 10px 0;">Data Maturity Level</p>
+              <p style="font-size: 48px; font-weight: bold; color: ${results.color}; margin: 0;">${results.level}</p>
+            </div>
+
+            <h3 style="color: #1f2937; margin-top: 20px;">Interpretation</h3>
+            <p style="color: #374151; line-height: 1.6;">${results.interpretation}</p>
+
+            <h3 style="color: #1f2937; margin-top: 20px;">Response Summary</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <tr>
+                <td style="padding: 12px; background-color: #f0fdf4; border: 1px solid #e5e7eb;"><strong>Strong Responses (A)</strong></td>
+                <td style="padding: 12px; background-color: #f0fdf4; border: 1px solid #e5e7eb; text-align: center; font-size: 20px; font-weight: bold;">${results.aCount}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; background-color: #fffbeb; border: 1px solid #e5e7eb;"><strong>Developing Responses (B)</strong></td>
+                <td style="padding: 12px; background-color: #fffbeb; border: 1px solid #e5e7eb; text-align: center; font-size: 20px; font-weight: bold;">${results.bCount}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; background-color: #fef2f2; border: 1px solid #e5e7eb;"><strong>Building Responses (C)</strong></td>
+                <td style="padding: 12px; background-color: #fef2f2; border: 1px solid #e5e7eb; text-align: center; font-size: 20px; font-weight: bold;">${results.cCount}</td>
+              </tr>
+            </table>
+
+            <h3 style="color: #1f2937; margin-top: 20px;">Your Next Steps</h3>
+            <ol style="color: #374151; line-height: 1.8;">
+              ${results.nextSteps.map((step, idx) => `<li style="margin-bottom: 10px;">${step}</li>`).join('')}
+            </ol>
+
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 30px 0;">
+
+            <h3 style="color: #1f2937;">Detailed Responses</h3>
+            ${questions.map((q, idx) => {
+              const response = responses[q.id];
+              const selectedAnswer = q.answers.find(a => a.value === response?.value);
+              return `
+                <div style="margin-bottom: 20px; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
+                  <p style="color: #1d4ed8; font-weight: 600; margin: 0 0 5px 0;">${q.step}</p>
+                  <p style="color: #1f2937; font-weight: 600; margin: 0 0 8px 0;">Q${idx + 1}: ${q.question}</p>
+                  <p style="color: #374151; margin: 0;">Answer: <strong>${response?.value || 'Not answered'}</strong> - ${selectedAnswer?.text || ''}</p>
+                </div>
+              `;
+            }).join('')}
+
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 30px 0;">
+
+            <div style="background-color: #eff6ff; padding: 20px; border-left: 4px solid #2563eb; border-radius: 8px; margin-top: 30px;">
+              <h3 style="color: #1e3a8a; margin-top: 0;">Next Steps</h3>
+              <p style="color: #1e3a8a; margin: 0;">
+                Use this report to guide your organization's data improvement efforts. Share these results with your team, 
+                pick one next step to focus on first, and reassess your progress in 90 days.
+              </p>
+            </div>
+
+            <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
+              <p>Generated from the Nonprofit Data Diagnostic Tool</p>
+              <p>Learn more: www.researchinsightslab.com</p>
+              <p>Contact: ahoxie@researchinsightslab.com</p>
+            </footer>
+          </div>
+        `;
+
+        const element = document.createElement('div');
+        element.innerHTML = reportContent;
+
+        const opt = {
+          margin: 10,
+          filename: `${userInfo.organizationName.replace(/\s+/g, '_')}_Data_Diagnostic_Report.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+        };
+
+        html2pdf().set(opt).from(element).save();
+      };
+
+      const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setUserInfo({
+          ...userInfo,
+          [name]: value
+        });
+      };
+
+      const isFormValid = userInfo.firstName && userInfo.lastName && userInfo.organizationName && userInfo.email;
+
       const allAnswered = Object.keys(responses).length === questions.length;
 
       return (
@@ -220,9 +352,168 @@
               </p>
             </div>
 
-            {showIntro && !showResults ? (
+            {!formSubmitted ? (
+              // FORM SECTION
+              <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', padding: '32px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '24px' }}>
+                  Get Started
+                </h2>
+                <p style={{ color: '#4b5563', marginBottom: '24px' }}>
+                  Please provide some basic information. We'll include this on your personalized report.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={userInfo.firstName}
+                      onChange={handleFormChange}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="Sarah"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={userInfo.lastName}
+                      onChange={handleFormChange}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="Smith"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+                      Organization Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="organizationName"
+                      value={userInfo.organizationName}
+                      onChange={handleFormChange}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="Acme Foundation"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+                      Your Role
+                    </label>
+                    <input
+                      type="text"
+                      name="role"
+                      value={userInfo.role}
+                      onChange={handleFormChange}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="Executive Director"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={userInfo.email}
+                      onChange={handleFormChange}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="sarah@acmefoundation.org"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#374151' }}>
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={userInfo.phone}
+                      onChange={handleFormChange}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setFormSubmitted(true)}
+                  disabled={!isFormValid}
+                  style={{
+                    padding: '12px 32px',
+                    background: isFormValid ? '#2563eb' : '#9ca3af',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '16px',
+                    cursor: isFormValid ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Continue to Assessment
+                </button>
+
+                <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '16px' }}>
+                  * Required fields. Your information will be included on your downloadable report.
+                </p>
+              </div>
+            ) : showIntro ? (
               // INTRO SECTION
               <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', padding: '32px' }}>
+                <div style={{ marginBottom: '20px', padding: '16px', background: '#f0fdf4', borderRadius: '8px', borderLeft: '4px solid #10b981' }}>
+                  <p style={{ color: '#166534', margin: 0 }}>
+                    ✓ Welcome, <strong>{userInfo.firstName} {userInfo.lastName}</strong> from <strong>{userInfo.organizationName}</strong>
+                  </p>
+                </div>
+
                 <section style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: '2px solid #e5e7eb' }}>
                   <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '16px' }}>
                     Does This Sound Familiar?
@@ -275,28 +566,6 @@
                   </div>
                 </section>
 
-                <section style={{ marginBottom: '32px' }}>
-                  <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '16px' }}>
-                    Why Strong Data Practices Matter
-                  </h2>
-                  <div style={{ display: 'space-y-4' }}>
-                    {[
-                      { title: 'Build Trust with Funders', desc: 'When you have reliable data practices, you can confidently demonstrate impact and secure continued funding' },
-                      { title: 'Eliminate Team Frustration', desc: 'When your team adopts data practices together, you eliminate the frustration of staff working from different spreadsheets' },
-                      { title: 'Make Better Decisions', desc: 'Evidence-backed decision-making enables strategic planning and resource allocation grounded in reality' },
-                      { title: 'Shift from Reactive to Proactive', desc: 'Move from scrambling to find data at the last minute to proactive storytelling that positions your organization as a leader' }
-                    ].map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', marginBottom: '16px' }}>
-                        <div style={{ background: '#10b981', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: '12px', marginTop: '4px', fontWeight: 'bold' }}>✓</div>
-                        <div>
-                          <p style={{ fontWeight: '600', color: '#1f2937' }}>{item.title}</p>
-                          <p style={{ color: '#4b5563', marginTop: '4px' }}>{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
                 <div style={{ textAlign: 'center' }}>
                   <button
                     onClick={() => setShowIntro(false)}
@@ -311,11 +580,8 @@
                       cursor: 'pointer'
                     }}
                   >
-                    Start the Diagnostic Assessment
+                    Start the Assessment
                   </button>
-                  <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '16px' }}>
-                    This assessment takes about 5-10 minutes and provides personalized recommendations based on your responses.
-                  </p>
                 </div>
               </div>
             ) : !showResults ? (
@@ -430,7 +696,7 @@
                   borderRadius: '8px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                   padding: '32px',
-                  borderTop: `4px solid ${results.color}`
+                  borderTop: `4px solid ${calculateResults().color}`
                 }}>
                   <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937', marginBottom: '16px' }}>
@@ -443,15 +709,22 @@
                       color: 'white',
                       fontSize: '48px',
                       fontWeight: 'bold',
-                      background: results.color
+                      background: calculateResults().color
                     }}>
-                      {results.level}
+                      {calculateResults().level}
                     </div>
                   </div>
 
-                  <p style={{ fontSize: '18px', color: '#374151', lineHeight: '1.6' }}>
-                    {results.interpretation}
+                  <p style={{ fontSize: '18px', color: '#374151', lineHeight: '1.6', marginBottom: '24px' }}>
+                    {calculateResults().interpretation}
                   </p>
+
+                  <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+                    <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 8px 0' }}>Your Organization:</p>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
+                      {userInfo.organizationName}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Next Steps */}
@@ -461,9 +734,9 @@
                     Your Next Steps
                   </h3>
                   <div style={{ display: 'space-y-3' }}>
-                    {results.nextSteps.map((step, idx) => (
+                    {calculateResults().nextSteps.map((step, idx) => (
                       <div key={idx} style={{ display: 'flex', padding: '12px', background: '#f3f4f6', borderRadius: '8px' }}>
-                        <span style={{ marginRight: '12px', color: results.color }}>✓</span>
+                        <span style={{ marginRight: '12px', color: calculateResults().color }}>✓</span>
                         <p style={{ color: '#374151' }}>{step}</p>
                       </div>
                     ))}
@@ -473,39 +746,57 @@
                 {/* Summary */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
                   <div style={{ background: '#f0fdf4', borderRadius: '8px', padding: '16px', textAlign: 'center', borderLeft: '4px solid #10b981' }}>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#15803d' }}>{results.aCount}</p>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#15803d' }}>{calculateResults().aCount}</p>
                     <p style={{ fontSize: '14px', color: '#16a34a' }}>Strong Responses</p>
                   </div>
                   <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '16px', textAlign: 'center', borderLeft: '4px solid #f59e0b' }}>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#b45309' }}>{results.bCount}</p>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#b45309' }}>{calculateResults().bCount}</p>
                     <p style={{ fontSize: '14px', color: '#d97706' }}>Developing Responses</p>
                   </div>
                   <div style={{ background: '#fef2f2', borderRadius: '8px', padding: '16px', textAlign: 'center', borderLeft: '4px solid #ef4444' }}>
-                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b' }}>{results.cCount}</p>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#991b1b' }}>{calculateResults().cCount}</p>
                     <p style={{ fontSize: '14px', color: '#dc2626' }}>Building Responses</p>
                   </div>
                 </div>
 
-                {/* Reset Button */}
-                <button
-                  onClick={() => {
-                    setResponses({});
-                    setShowResults(false);
-                    setShowIntro(true);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 24px',
-                    background: '#4b5563',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Start Over
-                </button>
+                {/* Download and Reset Buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <button
+                    onClick={downloadReport}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#10b981',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    📥 Download Report (PDF)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setResponses({});
+                      setShowResults(false);
+                      setShowIntro(true);
+                      setFormSubmitted(false);
+                    }}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#4b5563',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    Start Over
+                  </button>
+                </div>
 
                 {/* Footer */}
                 <div style={{ textAlign: 'center', fontSize: '14px', color: '#4b5563', background: 'white', borderRadius: '8px', padding: '16px' }}>
